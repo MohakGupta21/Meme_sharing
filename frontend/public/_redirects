@@ -1,0 +1,3 @@
+# SPA fallback: serve index.html for client-side routes (React Router).
+# Vite copies public/ to the build output root; Cloudflare Pages honours this file.
+/*    /index.html    200

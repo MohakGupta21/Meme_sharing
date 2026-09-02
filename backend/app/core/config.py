@@ -67,6 +67,29 @@ class Settings(BaseSettings):
         return self.environment.lower() in {"production", "prod"}
 
     @model_validator(mode="after")
+    def _normalize_database_url(self) -> Settings:
+        """Accept the plain ``postgresql://`` / ``postgres://`` URLs that managed
+        hosts (Render, Heroku, …) hand out and rewrite them to the async driver
+        this app talks to. Also drop libpq-only query params (``sslmode``,
+        ``channel_binding``) that asyncpg rejects — use a same-region internal
+        DB URL, which needs neither."""
+        url = self.database_url
+        for prefix in ("postgresql://", "postgres://"):
+            if url.startswith(prefix):
+                url = "postgresql+asyncpg://" + url[len(prefix) :]
+                break
+        if url.startswith("postgresql+asyncpg://") and "?" in url:
+            base, _, query = url.partition("?")
+            kept = [
+                kv
+                for kv in query.split("&")
+                if kv and kv.split("=", 1)[0] not in {"sslmode", "channel_binding"}
+            ]
+            url = base + ("?" + "&".join(kept) if kept else "")
+        self.database_url = url
+        return self
+
+    @model_validator(mode="after")
     def _guard_production(self) -> Settings:
         if self.is_production:
             if self.jwt_secret in _PLACEHOLDER_SECRETS or len(self.jwt_secret) < 32:
