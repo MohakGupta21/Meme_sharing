@@ -1,34 +1,39 @@
-# Render Blueprint — MemeShare backend + managed Postgres.
+# Render Blueprint — everything on Render, all free tier.
 # Docs: https://render.com/docs/blueprint-spec
 #
-# The frontend is NOT here — it deploys to Cloudflare Pages (see DEPLOY.md).
-# Media is NOT on Render — it lives in Cloudflare R2 (STORAGE_BACKEND=s3 below).
+#   memeshare-db   -> free PostgreSQL 16   (Render deletes free DBs after 30 days)
+#   memeshare-api  -> free FastAPI web service
+#   memeshare-web  -> free static site (the React frontend)
 #
-# IMPORTANT: the WebSocket ConnectionManager is in-process, so this service must
-# run as a SINGLE instance with a SINGLE worker (numInstances: 1, gunicorn -w 1).
-# Do not enable autoscaling until a Redis pub/sub adapter is added.
+# FREE-TIER LIMITS TO KNOW:
+#  * No persistent disk -> uploaded media (STORAGE_BACKEND=local) is LOST on every
+#    deploy / restart / daily recycle. Swap to S3/R2 (see git history of this file)
+#    before real users.
+#  * The web service sleeps after ~15 min idle; first request then takes ~1 min and
+#    all live WebSocket chats drop. Fine for testing.
+#  * Always a single instance -> matches the in-process WebSocket registry.
 
 databases:
   - name: memeshare-db
-    plan: basic-256mb          # smallest paid tier; use `free` to trial (expires after 30 days)
+    plan: free
     databaseName: memeshare
     user: memeshare
     region: oregon
     postgresMajorVersion: "16"
 
 services:
+  # ---------- Backend API + WebSockets ----------
   - type: web
     name: memeshare-api
     runtime: python
-    plan: starter             # `free` works but sleeps on idle -> drops every live chat socket
-    region: oregon            # keep in the same region as the database
+    plan: free
+    region: oregon
     rootDir: backend
-    numInstances: 1           # MUST stay 1 (in-process WebSocket registry)
-    autoDeploy: true          # deploy on push to the default branch
+    autoDeploy: true
     buildCommand: "pip install -e '.[prod]'"
-    preDeployCommand: "alembic upgrade head"   # runs once per deploy, before traffic shifts
-    startCommand: "gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:$PORT --timeout 120"
-    healthCheckPath: /health  # plain liveness check — no DB dependency
+    # Free tier has no preDeployCommand, so migrate right before starting the server.
+    startCommand: "alembic upgrade head && exec gunicorn app.main:app -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:$PORT --timeout 120"
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
@@ -36,45 +41,31 @@ services:
         value: production
       - key: DEBUG
         value: "false"
-      - key: SQL_ECHO
-        value: "false"
-
-      # Auth — Render generates a strong random value on first deploy.
-      # Verify it is >= 32 chars in the dashboard; regenerate if not.
       - key: JWT_SECRET
-        generateValue: true
-
-      # Database — internal (same-region) connection string, no sslmode param.
+        generateValue: true            # Render makes a strong value; check it's >= 32 chars
       - key: DATABASE_URL
         fromDatabase:
           name: memeshare-db
           property: connectionString
-
-      # CORS — set to the exact Cloudflare Pages origin AFTER that project exists,
-      # e.g. https://memeshare.pages.dev  (no trailing slash, never "*").
-      - key: CORS_ORIGINS
-        sync: false
-
-      # Object storage — Cloudflare R2 (S3-compatible). Fill these in the dashboard.
       - key: STORAGE_BACKEND
-        value: s3
-      - key: S3_BUCKET
-        value: memeshare-media
-      - key: S3_REGION
-        value: auto                       # R2 expects the literal "auto"
-      - key: S3_ENDPOINT_URL
-        sync: false                       # https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-      - key: S3_ACCESS_KEY
-        sync: false                       # R2 API token — Access Key ID
-      - key: S3_SECRET_KEY
-        sync: false                       # R2 API token — Secret Access Key
-      - key: S3_PUBLIC_URL
-        sync: false                       # public base URL for the bucket (custom domain recommended)
+        value: local                   # ephemeral on free tier — see note above
+      - key: CORS_ORIGINS
+        sync: false                    # set to the memeshare-web URL after first deploy
 
-      # Upload ceilings — uncomment to override the code defaults (10MB img / 50MB vid / 64MB req)
-      # - key: MAX_IMAGE_BYTES
-      #   value: "10485760"
-      # - key: MAX_VIDEO_BYTES
-      #   value: "52428800"
-      # - key: MAX_REQUEST_BYTES
-      #   value: "67108864"
+  # ---------- Frontend (static React build) ----------
+  - type: web
+    name: memeshare-web
+    runtime: static
+    rootDir: frontend
+    autoDeploy: true
+    buildCommand: "npm ci && npm run build"
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html       # SPA fallback for React Router
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false                    # https://<memeshare-api URL>/api/v1
+      - key: VITE_WS_URL
+        sync: false                    # wss://<memeshare-api URL>/ws/chat
