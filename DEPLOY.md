@@ -1,18 +1,16 @@
-# Deploying MemeShare — simple free path (Render only)
+# Deploying MemeShare — free path
 
-Everything runs on Render's free tier from one Blueprint file ([render.yaml](render.yaml)):
-
-| Service         | What it is              |
-|-----------------|-------------------------|
-| `memeshare-db`  | PostgreSQL 16 (free)    |
-| `memeshare-api` | FastAPI backend + WS    |
-| `memeshare-web` | React frontend (static) |
+| Piece                  | Host                          |
+|------------------------|-------------------------------|
+| `memeshare-db`         | Render — PostgreSQL 16 (free)  |
+| `memeshare-api`        | Render — FastAPI backend + WS  |
+| frontend (React SPA)   | Vercel                        |
 
 ### Free-tier caveats (read once)
 
-- **Uploaded media is not saved.** Free services have no disk, so profile pics and
-  memes vanish on every redeploy/restart. Good enough to try the app; move to
-  object storage (S3 / Cloudflare R2) before real users.
+- **Uploaded media is not saved.** The free Render service has no disk, so profile
+  pics and memes vanish on every redeploy/restart. Good enough to try the app; move
+  to object storage (S3 / Cloudflare R2) before real users.
 - **The API sleeps after ~15 min idle.** Next request takes ~1 min and drops live
   chats. Normal for free.
 - **The free database is deleted after 30 days.** Render emails a warning.
@@ -28,44 +26,73 @@ git push -u origin main
 
 (Repo is clean — no secrets tracked.)
 
-## Step 2 — Create the Blueprint on Render
+## Step 2 — Backend + database on Render
 
-1. Go to <https://dashboard.render.com> → **New → Blueprint**.
-2. Connect your GitHub and pick the `memeshare` repo.
-3. Render reads `render.yaml` and lists one database + two services. Click
-   **Apply**.
-4. The first build starts. `memeshare-api` will finish but stay unhealthy until
-   Step 3 (CORS not set yet) — that's expected.
-
-## Step 3 — Fill in the 3 blank env vars
-
-In the Render dashboard:
-
-1. Open **memeshare-api** and copy its URL from the top of the page, e.g.
+1. <https://dashboard.render.com> → **New → Blueprint** → connect GitHub → pick the
+   repo. Render reads [render.yaml](render.yaml) (one database + `memeshare-api`).
+   Click **Apply**.
+2. Wait until **memeshare-db** shows **Available** (2–5 min). Note: Render allows
+   only **one free PostgreSQL per account**.
+3. On **memeshare-api → Environment**, confirm `JWT_SECRET` is ≥ 32 chars
+   (regenerate if not). Leave `CORS_ORIGINS` blank for now.
+4. Copy the API URL from the top of the **memeshare-api** page, e.g.
    `https://memeshare-api.onrender.com`.
-2. **memeshare-web → Environment** → add:
-   - `VITE_API_BASE_URL` = `https://memeshare-api.onrender.com/api/v1`
-   - `VITE_WS_URL` = `wss://memeshare-api.onrender.com/ws/chat`  *(wss, not ws)*
-3. Open **memeshare-web** and copy *its* URL, e.g.
-   `https://memeshare-web.onrender.com`.
-4. **memeshare-api → Environment** → set:
-   - `CORS_ORIGINS` = `https://memeshare-web.onrender.com`
-5. Also on **memeshare-api → Environment**, open `JWT_SECRET` and confirm it is at
-   least 32 characters. If shorter, click regenerate.
+5. Check `https://memeshare-api.onrender.com/health` → `{"status":"ok"}` and
+   `/health/db` → `{"status":"ok"}`.
 
-Each save triggers an automatic redeploy.
+## Step 3 — Frontend on Vercel
 
-## Step 4 — Redeploy the frontend
+1. <https://vercel.com/new> → **Import** the same GitHub repo.
+2. In the import screen:
+   - **Root Directory:** click *Edit* → select `frontend`.
+   - **Framework Preset:** Vercel auto-detects **Vite** (leave build =
+     `npm run build`, output = `dist`). [frontend/vercel.json](frontend/vercel.json)
+     already sets these plus the SPA rewrite.
+   - **Node.js Version:** 20.x (pinned by `frontend/.node-version`).
+3. Expand **Environment Variables** and add (Production + Preview):
+   | Name                 | Value                                                |
+   |----------------------|------------------------------------------------------|
+   | `VITE_API_BASE_URL`  | `https://memeshare-api.onrender.com/api/v1`           |
+   | `VITE_WS_URL`        | `wss://memeshare-api.onrender.com/ws/chat`  (wss!)    |
+   *(use the real API URL from Step 2.4)*
+4. Click **Deploy**. You get `https://<project>.vercel.app`.
 
-The frontend baked in the API URL at build time, so after Step 3 do
-**memeshare-web → Manual Deploy → Deploy latest commit** once.
+> `VITE_*` vars are inlined at build time. If you change them later, redeploy on
+> Vercel (**Deployments → ⋯ → Redeploy**).
 
-## Step 5 — Check it works
+## Step 4 — Point CORS at Vercel
 
-- `https://memeshare-api.onrender.com/health` → `{"status":"ok"}`
-- `https://memeshare-api.onrender.com/health/db` → `{"status":"ok"}`
-- Open `https://memeshare-web.onrender.com`, sign up, post a meme, and open a chat
-  in two browsers to confirm realtime messages.
+**Render → memeshare-api → Environment** → set:
+
+```
+CORS_ORIGINS = https://<project>.vercel.app
+```
+
+Add any custom domain too, comma-separated, no trailing slash. Save → Render
+redeploys.
+
+> Vercel preview deployments get unique URLs that won't match `CORS_ORIGINS`. For
+> previews to reach the API, add a wildcard-friendly origin or just test against the
+> production URL.
+
+## Step 5 — Smoke test
+
+Open `https://<project>.vercel.app`, sign up, post a meme, then open a chat in two
+browsers to confirm realtime messages arrive.
+
+---
+
+### Deploying the frontend from the CLI instead (optional)
+
+```bash
+npm i -g vercel
+cd frontend
+vercel            # first run links the project; answer the prompts
+vercel --prod     # promote to production
+```
+
+Set the two `VITE_*` env vars with `vercel env add` or in the dashboard before
+`vercel --prod`.
 
 ---
 
@@ -78,4 +105,4 @@ Not covered by this free deploy (see `SECURITY.md`):
 - Report + block, admin delete/ban, NSFW scanning
 - Terms of Service, Privacy Policy, account deletion
 - Error tracking (Sentry) + uptime monitoring + database backups
-- A paid instance so the service doesn't sleep and drop WebSocket connections
+- A paid Render instance so the service doesn't sleep and drop WebSocket connections
