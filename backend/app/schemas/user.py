@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.storage import public_url_for
 
 
 class UserPublic(BaseModel):
@@ -16,6 +18,12 @@ class UserPublic(BaseModel):
     caption: str
     bio: str | None = None
     created_at: datetime
+
+    @field_validator("profile_picture_url", mode="after")
+    @classmethod
+    def _rebuild_avatar_url(cls, v: str) -> str:
+        # Rows may carry a stale host; always resolve against current storage config.
+        return public_url_for(v)
 
 
 class UserMe(UserPublic):

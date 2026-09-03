@@ -84,6 +84,25 @@ def create_app() -> FastAPI:
             await conn.execute(text("SELECT 1"))
         return {"status": "ok"}
 
+    @app.get("/health/storage", tags=["meta"])
+    async def health_storage():
+        """Verify the configured blob store is reachable — handy after switching to S3/R2."""
+        import anyio
+
+        from app.storage import get_storage
+
+        backend = settings.storage_backend
+        try:
+            storage = await anyio.to_thread.run_sync(get_storage)
+            await anyio.to_thread.run_sync(storage.check)
+        except Exception as exc:  # noqa: BLE001 — report the reason, don't 500
+            log.warning("storage health check failed: %s", exc)
+            return JSONResponse(
+                status_code=503,
+                content={"status": "error", "backend": backend, "detail": str(exc)},
+            )
+        return {"status": "ok", "backend": backend}
+
     app.include_router(api_router, prefix=settings.api_v1_prefix)
     app.include_router(ws_router)
 

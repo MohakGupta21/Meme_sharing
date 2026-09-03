@@ -8,8 +8,13 @@
 #
 # FREE-TIER LIMITS TO KNOW:
 #  * No persistent disk -> uploaded media (STORAGE_BACKEND=local) is LOST on every
-#    deploy / restart / daily recycle. Swap to S3/R2 (see git history of this file)
-#    before real users.
+#    deploy / restart / daily recycle: the Postgres rows survive but the image
+#    files do not, so old posts/avatars 404. Move media to object storage:
+#      1. Create a bucket + API token (Cloudflare R2 free tier: 10 GB, no egress).
+#      2. In the Render dashboard fill in the S3_* vars below (they are sync:false).
+#      3. Set STORAGE_BACKEND=s3 and redeploy.
+#    URLs are rebuilt from config at response time, so no data migration is needed;
+#    images uploaded while on `local` still need re-uploading.
 #  * The web service sleeps after ~15 min idle; first request then takes ~1 min and
 #    all live WebSocket chats drop. Fine for testing.
 #  * Always a single instance -> matches the in-process WebSocket registry.
@@ -51,6 +56,19 @@ services:
           name: memeshare-db
           property: connectionString
       - key: STORAGE_BACKEND
-        value: local                   # ephemeral on free tier — see note above
+        value: local                   # ephemeral on free tier — set to "s3" once the S3_* vars are filled in
       - key: CORS_ORIGINS
         sync: false                    # set to the Vercel frontend URL after it deploys
+      # ----- Object storage (fill these in the dashboard, then STORAGE_BACKEND=s3) -----
+      - key: S3_ENDPOINT_URL
+        sync: false                    # e.g. https://<accountid>.r2.cloudflarestorage.com  (omit for AWS S3)
+      - key: S3_REGION
+        value: auto                    # "auto" for R2; a real region (e.g. us-east-1) for AWS S3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_PUBLIC_URL
+        sync: false                    # public base for objects, e.g. https://media.<yourdomain> or the R2 public bucket URL

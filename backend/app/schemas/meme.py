@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.user import UserPublic
+from app.storage import public_url_for
 
 
 class MediaAssetOut(BaseModel):
@@ -16,6 +17,12 @@ class MediaAssetOut(BaseModel):
     width: int | None = None
     height: int | None = None
     duration_ms: int | None = None
+
+    @field_validator("url", mode="after")
+    @classmethod
+    def _rebuild_url(cls, v: str) -> str:
+        # Rows may carry a stale host; always resolve against current storage config.
+        return public_url_for(v)
 
 
 class MemeOut(BaseModel):

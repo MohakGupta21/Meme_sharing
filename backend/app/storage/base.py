@@ -22,3 +22,6 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def url_for(self, key: str) -> str: ...
+
+    def check(self) -> None:  # noqa: B027 — optional hook; override where it can fail
+        """Verify the backend is reachable/usable (used by /health/storage)."""
