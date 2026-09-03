@@ -14,6 +14,8 @@ htmlcov/
 .env
 .env.local
 *.local
+*.env
+!*.env.example
 
 # Media (local storage backend)
 backend/media_store/
