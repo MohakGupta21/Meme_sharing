@@ -5,6 +5,16 @@ import { useChatSocket } from "../hooks/useChatSocket";
 import { useAuth } from "../auth/useAuth";
 import type { Message } from "../types";
 
+/** Backend stores naive UTC ("2026-09-02 18:05:19"); render it as a local HH:MM. */
+function formatTime(ts: string): string {
+  const iso = ts.includes("T") ? ts : ts.replace(" ", "T");
+  const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(iso);
+  return new Date(hasTz ? iso : `${iso}Z`).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function Chat() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -152,14 +162,19 @@ export function Chat() {
                 return (
                   <div
                     key={m.id}
-                    className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
+                    className={`w-fit max-w-[70%] break-words rounded-lg px-3 py-2 text-sm ${
                       mine ? "ml-auto bg-indigo-600 text-white" : "bg-white"
                     }`}
                   >
-                    {m.body}
-                    {mine && m.read_at && (
-                      <span className="ml-2 text-[10px] opacity-70">read</span>
-                    )}
+                    <span>{m.body}</span>
+                    <span
+                      className={`mt-1 block text-right text-[10px] ${
+                        mine ? "text-white/70" : "text-gray-400"
+                      }`}
+                    >
+                      {formatTime(m.created_at)}
+                      {mine && m.read_at && " · read"}
+                    </span>
                   </div>
                 );
               })}

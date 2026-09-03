@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     # CORS — comma-separated string in the env; use `.cors_origin_list` in code.
     cors_origins: str = Field(
-        default="http://localhost:5173",
+        default="http://localhost:5174,http://127.0.0.1:5174",
         validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"),
     )
 

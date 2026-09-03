@@ -14,7 +14,7 @@ os.environ["JWT_SECRET"] = "test-secret"
 os.environ["DEBUG"] = "false"
 os.environ["STORAGE_BACKEND"] = "local"
 os.environ["LOCAL_STORAGE_DIR"] = tempfile.mkdtemp(prefix="memeshare-media-")
-os.environ["CORS_ORIGINS"] = "http://localhost:5173"
+os.environ["CORS_ORIGINS"] = "http://localhost:5174"
 
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
