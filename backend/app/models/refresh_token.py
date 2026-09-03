@@ -19,7 +19,10 @@ class RefreshToken(Base):
     )
     jti: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Naive UTC (see app.core.security.create_refresh_token). A tz-aware column
+    # round-trips as aware on asyncpg but naive on SQLite, which breaks the
+    # expiry comparison in auth_service on Postgres only.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), nullable=False)
     revoked: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )

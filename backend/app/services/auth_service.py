@@ -25,6 +25,14 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _as_naive_utc(dt: datetime) -> datetime:
+    """Refresh-token timestamps are stored as naive UTC, but asyncpg hands back
+    tz-aware datetimes for any legacy tz-aware column. Normalise before comparing."""
+    if dt.tzinfo is not None:
+        return dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
+
+
 async def _issue_pair(db: AsyncSession, user: User) -> tuple[str, str]:
     access = create_access_token(user.id)
     refresh, jti, expires_at = create_refresh_token(user.id)
@@ -93,7 +101,7 @@ async def refresh_access(db: AsyncSession, refresh_token: str) -> tuple[str, str
         row is None
         or row.revoked
         or row.token_hash != _hash_token(refresh_token)
-        or row.expires_at < datetime.now(UTC).replace(tzinfo=None)
+        or _as_naive_utc(row.expires_at) < datetime.now(UTC).replace(tzinfo=None)
     ):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
