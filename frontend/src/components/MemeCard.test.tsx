@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import { AuthProvider } from "../auth/AuthContext";
 import { MemeCard } from "./MemeCard";
 import type { Meme } from "../types";
 
@@ -38,7 +39,9 @@ function wrap(meme: Meme) {
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
-        <MemeCard meme={meme} />
+        <AuthProvider>
+          <MemeCard meme={meme} />
+        </AuthProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );

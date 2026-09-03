@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   useMutation,
   useQueryClient,
@@ -6,6 +6,8 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { likeMeme, unlikeMeme } from "../api/engagement";
+import { deleteMeme } from "../api/memes";
+import { useAuth } from "../auth/useAuth";
 import type { Meme, Page } from "../types";
 
 /** Apply a transform to every cached meme wherever it appears. */
@@ -23,8 +25,29 @@ export function patchMemeEverywhere(qc: QueryClient, fn: (m: Meme) => Meme) {
   qc.setQueriesData<Meme>({ queryKey: ["meme"] }, (m) => (m ? fn(m) : m));
 }
 
+/** Drop a meme from every cache it might appear in. */
+export function removeMemeEverywhere(qc: QueryClient, memeId: number) {
+  const dropFromPages = (data?: InfiniteData<Page<Meme>>) =>
+    data
+      ? {
+          ...data,
+          pages: data.pages.map((p) => ({
+            ...p,
+            items: p.items.filter((m) => m.id !== memeId),
+          })),
+        }
+      : data;
+  qc.setQueriesData<InfiniteData<Page<Meme>>>({ queryKey: ["feed"] }, dropFromPages);
+  qc.setQueriesData<InfiniteData<Page<Meme>>>({ queryKey: ["user-memes"] }, dropFromPages);
+  qc.removeQueries({ queryKey: ["meme", memeId] });
+}
+
 export function MemeCard({ meme }: { meme: Meme }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMine = user?.id === meme.author.id;
 
   const toggleLike = useMutation({
     mutationFn: () => (meme.liked_by_me ? unlikeMeme(meme.id) : likeMeme(meme.id)),
@@ -46,6 +69,18 @@ export function MemeCard({ meme }: { meme: Meme }) {
       patchMemeEverywhere(qc, (m) => (m.id === meme.id ? { ...m, ...state } : m)),
   });
 
+  const remove = useMutation({
+    mutationFn: () => deleteMeme(meme.id),
+    onSuccess: () => {
+      if (location.pathname === `/memes/${meme.id}`) navigate("/feed", { replace: true });
+      removeMemeEverywhere(qc, meme.id);
+    },
+  });
+
+  const onDelete = () => {
+    if (window.confirm("Delete this post? This can't be undone.")) remove.mutate();
+  };
+
   return (
     <article className="rounded-lg border bg-white shadow-sm">
       <header className="flex items-center gap-3 p-3">
@@ -60,6 +95,15 @@ export function MemeCard({ meme }: { meme: Meme }) {
           </Link>
           <p className="text-xs text-gray-500">{meme.author.lives_in}</p>
         </div>
+        {isMine && (
+          <button
+            onClick={onDelete}
+            disabled={remove.isPending}
+            className="ml-auto text-xs font-medium text-gray-400 hover:text-rose-600 disabled:opacity-50"
+          >
+            {remove.isPending ? "Deleting…" : "Delete"}
+          </button>
+        )}
       </header>
 
       {meme.title && <p className="px-3 pb-2 text-sm font-medium">{meme.title}</p>}
