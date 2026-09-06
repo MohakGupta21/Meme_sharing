@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+from urllib.parse import unquote, urlsplit
 
 from fastapi import HTTPException, status
 
@@ -16,6 +17,16 @@ _VIDEO_EXT = {"mp4", "webm", "mov", "m4v", "ogv", "avi", "mkv"}
 
 # A Cloudinary delivery URL: .../<resource_type>/upload/[v<version>/]<public_id>.<ext>
 _DELIVERY_RE = re.compile(r"/(?:image|video|raw)/(?:upload|authenticated)/(?:v\d+/)?(.+)$")
+
+
+def _reason(exc: Exception) -> str:
+    """A short, secret-free description of a Cloudinary failure.
+
+    The cloudinary SDK raises its typed exceptions (``NotAllowed``, ``BadRequest``,
+    …) with the API's plain ``error.message`` string as the payload — no
+    credentials in it — so it is safe to pass through to the client and logs."""
+    msg = str(exc).strip()
+    return f"{type(exc).__name__}: {msg}" if msg else type(exc).__name__
 
 
 def _split_key(key: str) -> tuple[str, str]:
@@ -60,15 +71,26 @@ class CloudinaryStorage(StorageBackend):
 
         self._cloudinary = cloudinary
         if cloudinary_url:
-            # cloudinary://<api_key>:<api_secret>@<cloud_name>
-            cloudinary.config(cloudinary_url=cloudinary_url, secure=secure)
-        else:
-            cloudinary.config(
-                cloud_name=cloud_name,
-                api_key=api_key,
-                api_secret=api_secret,
-                secure=secure,
-            )
+            # Parse cloudinary://<api_key>:<api_secret>@<cloud_name> ourselves and
+            # feed discrete values: cloudinary.config(cloudinary_url=...) does NOT
+            # parse the URL (the SDK only reads the CLOUDINARY_URL *env var*, at
+            # import time), so relying on it silently leaves credentials unset.
+            parsed = urlsplit(cloudinary_url.strip())
+            if parsed.scheme != "cloudinary" or not parsed.hostname:
+                raise RuntimeError(
+                    "CLOUDINARY_URL must look like "
+                    "cloudinary://<api_key>:<api_secret>@<cloud_name>"
+                )
+            cloud_name = parsed.hostname
+            api_key = unquote(parsed.username) if parsed.username else None
+            api_secret = unquote(parsed.password) if parsed.password else None
+
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=api_key,
+            api_secret=api_secret,
+            secure=secure,
+        )
         cfg = cloudinary.config()
         if not (cfg.cloud_name and cfg.api_key and cfg.api_secret):
             raise RuntimeError(
@@ -96,7 +118,7 @@ class CloudinaryStorage(StorageBackend):
             log.exception("Cloudinary upload failed (key=%s)", key)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Media storage rejected the upload ({type(exc).__name__})",
+                detail=f"Media storage rejected the upload ({_reason(exc)})",
             ) from exc
         return StoredObject(key=key, url=result.get("secure_url") or result["url"])
 
