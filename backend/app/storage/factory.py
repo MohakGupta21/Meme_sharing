@@ -10,6 +10,23 @@ from app.storage.local import LocalStorage
 @lru_cache
 def get_storage() -> StorageBackend:
     s = get_settings()
+    if s.storage_backend == "cloudinary":
+        if not s.cloudinary_url and not (
+            s.cloudinary_cloud_name and s.cloudinary_api_key and s.cloudinary_api_secret
+        ):
+            raise RuntimeError(
+                "STORAGE_BACKEND=cloudinary but no credentials: set CLOUDINARY_URL or "
+                "CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET"
+            )
+        from app.storage.cloudinary_store import CloudinaryStorage
+
+        return CloudinaryStorage(
+            cloud_name=s.cloudinary_cloud_name,
+            api_key=s.cloudinary_api_key,
+            api_secret=s.cloudinary_api_secret,
+            cloudinary_url=s.cloudinary_url,
+            secure=s.cloudinary_secure,
+        )
     if s.storage_backend == "s3":
         missing = [
             name

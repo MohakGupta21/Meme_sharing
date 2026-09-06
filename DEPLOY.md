@@ -9,8 +9,9 @@
 ### Free-tier caveats (read once)
 
 - **Uploaded media is not saved.** The free Render service has no disk, so profile
-  pics and memes vanish on every redeploy/restart. Good enough to try the app; move
-  to object storage (S3 / Cloudflare R2) before real users.
+  pics and memes vanish on every redeploy/restart. Good enough to try the app; for
+  real users switch media to Cloudinary (see below) or S3/R2. User and chat data
+  live in Postgres and persist regardless.
 - **The API sleeps after ~15 min idle.** Next request takes ~1 min and drops live
   chats. Normal for free.
 - **The free database is deleted after 30 days.** Render emails a warning.
@@ -96,11 +97,30 @@ Set the two `VITE_*` env vars with `vercel env add` or in the dashboard before
 
 ---
 
+## Persisting media — Cloudinary
+
+Memes and avatars can be stored in a Cloudinary account so they survive redeploys
+(user accounts and chats are already in Postgres and persist on their own).
+
+1. Create a free Cloudinary account. On the dashboard, copy the **API environment
+   variable** — it looks like `cloudinary://<api_key>:<api_secret>@<cloud_name>`.
+2. **Render → memeshare-api → Environment**: set `CLOUDINARY_URL` to that string and
+   `STORAGE_BACKEND=cloudinary`. Save (Render redeploys).
+3. Check `https://memeshare-api.onrender.com/health/storage` →
+   `{"status":"ok","backend":"cloudinary"}`.
+
+URLs are rebuilt from config at response time, so no data migration is needed —
+but files uploaded while on `local` are already gone and need re-uploading.
+
+Locally: `pip install -e '.[prod]'`, then in `backend/.env` set `STORAGE_BACKEND=cloudinary`
+and `CLOUDINARY_URL=...` (or the discrete `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY`
+/ `CLOUDINARY_API_SECRET`).
+
 ## From here to "real users"
 
 Not covered by this free deploy (see `SECURITY.md`):
 
-- Object storage for media (so uploads persist)
+- Object storage for media (so uploads persist) — or use the Cloudinary path above
 - Rate limiting on login / signup / upload / WebSocket
 - Report + block, admin delete/ban, NSFW scanning
 - Terms of Service, Privacy Policy, account deletion

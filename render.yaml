@@ -9,10 +9,13 @@
 # FREE-TIER LIMITS TO KNOW:
 #  * No persistent disk -> uploaded media (STORAGE_BACKEND=local) is LOST on every
 #    deploy / restart / daily recycle: the Postgres rows survive but the image
-#    files do not, so old posts/avatars 404. Move media to object storage:
-#      1. Create a bucket + API token (Cloudflare R2 free tier: 10 GB, no egress).
-#      2. In the Render dashboard fill in the S3_* vars below (they are sync:false).
-#      3. Set STORAGE_BACKEND=s3 and redeploy.
+#    files do not, so old posts/avatars 404. Move media off the disk:
+#      Cloudinary (recommended, free tier ~25 GB storage + 25 GB/mo delivery):
+#        1. Create a Cloudinary account; copy the "API environment variable"
+#           (cloudinary://<key>:<secret>@<cloud_name>) from the dashboard.
+#        2. In the Render dashboard set CLOUDINARY_URL (sync:false).
+#        3. Set STORAGE_BACKEND=cloudinary and redeploy.
+#      S3 / Cloudflare R2 (alternative): fill the S3_* vars, STORAGE_BACKEND=s3.
 #    URLs are rebuilt from config at response time, so no data migration is needed;
 #    images uploaded while on `local` still need re-uploading.
 #  * The web service sleeps after ~15 min idle; first request then takes ~1 min and
@@ -56,9 +59,12 @@ services:
           name: memeshare-db
           property: connectionString
       - key: STORAGE_BACKEND
-        value: local                   # ephemeral on free tier — set to "s3" once the S3_* vars are filled in
+        value: local                   # ephemeral on free tier — set to "cloudinary" (or "s3") once the vars below are filled in
       - key: CORS_ORIGINS
         sync: false                    # set to the Vercel frontend URL after it deploys
+      # ----- Cloudinary (fill this in the dashboard, then STORAGE_BACKEND=cloudinary) -----
+      - key: CLOUDINARY_URL
+        sync: false                    # cloudinary://<api_key>:<api_secret>@<cloud_name> from the Cloudinary dashboard
       # ----- Object storage (fill these in the dashboard, then STORAGE_BACKEND=s3) -----
       - key: S3_ENDPOINT_URL
         sync: false                    # e.g. https://<accountid>.r2.cloudflarestorage.com  (omit for AWS S3)

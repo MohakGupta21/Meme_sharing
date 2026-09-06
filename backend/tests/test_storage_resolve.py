@@ -35,6 +35,20 @@ def test_rebuilds_against_current_base(stored):
     assert public_url_for(stored) == f"{_BASE}/avatars/xy.png"
 
 
+@pytest.mark.parametrize(
+    "stored",
+    [
+        "https://res.cloudinary.com/demo/image/upload/v1699999999/memes/1/abc.png",
+        "https://res.cloudinary.com/demo/image/upload/memes/1/abc.png",
+        "http://res.cloudinary.com/demo/image/authenticated/v1/memes/1/abc.png",
+    ],
+)
+def test_cloudinary_url_reduced_to_key(stored):
+    # Rows written by the cloudinary backend must round-trip even though the
+    # active backend in tests is `local`.
+    assert to_storage_key(stored) == "memes/1/abc.png"
+
+
 def test_idempotent():
     once = public_url_for("https://stale/media/memes/2/z.jpg")
     assert public_url_for(once) == once

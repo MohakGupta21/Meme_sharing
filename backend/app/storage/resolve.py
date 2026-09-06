@@ -38,6 +38,11 @@ def to_storage_key(stored: str) -> str:
     for base in _known_bases():
         if s.startswith(base + "/"):
             return s[len(base) + 1 :]
+    from app.storage.cloudinary_store import to_cloudinary_key
+
+    cloud_key = to_cloudinary_key(s)  # .../image/upload/v1/memes/1/a.png -> memes/1/a.png
+    if cloud_key is not None:
+        return cloud_key
     if "://" in s:  # drop scheme://host, keep the leading-slash path
         rest = s.split("://", 1)[1]
         slash = rest.find("/")

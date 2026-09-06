@@ -41,7 +41,8 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"),
     )
 
-    # Storage
+    # Storage — "local" (dev), "s3" (S3/R2/MinIO), or "cloudinary" (memes + avatars
+    # in a Cloudinary account; recommended for production so uploads persist).
     storage_backend: str = "local"
     local_storage_dir: str = "media_store"
     local_storage_public_url: str = "http://localhost:8000/media"
@@ -51,6 +52,17 @@ class Settings(BaseSettings):
     s3_access_key: str | None = None
     s3_secret_key: str | None = None
     s3_public_url: str | None = None
+
+    # Cloudinary — only needed when STORAGE_BACKEND=cloudinary (requires the `prod`
+    # extra for the cloudinary SDK). Provide either CLOUDINARY_URL (a single
+    # cloudinary://<api_key>:<api_secret>@<cloud_name> string from the dashboard)
+    # or the three discrete values below.
+    cloudinary_url: str | None = None
+    cloudinary_cloud_name: str | None = None
+    cloudinary_api_key: str | None = None
+    cloudinary_api_secret: str | None = None
+    # Deliver over https and let Cloudinary pick the best format/quality.
+    cloudinary_secure: bool = True
 
     # Upload limits
     max_image_bytes: int = 10 * 1024 * 1024
