@@ -57,37 +57,40 @@ export function CommentList({ memeId, memeAuthorId }: { memeId: number; memeAuth
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Add a comment…"
-          className="flex-1 rounded-md border px-3 py-2 text-sm"
+          className="input flex-1"
           maxLength={1000}
         />
         <button
           type="submit"
           disabled={add.isPending || !draft.trim()}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn btn-primary"
         >
           Post
         </button>
       </form>
 
       {error && <p className="text-sm text-rose-600">{error}</p>}
-      {commentsQ.isLoading && <p className="text-sm text-gray-500">Loading comments…</p>}
+      {commentsQ.isLoading && <p className="text-sm text-slate-400">Loading comments…</p>}
+      {!commentsQ.isLoading && comments.length === 0 && (
+        <p className="text-sm text-slate-400">No comments yet — be the first.</p>
+      )}
 
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {comments.map((c) => (
-          <li key={c.id} className="flex items-start gap-2 text-sm">
+          <li key={c.id} className="flex items-start gap-2.5 text-sm">
             <img
               src={c.author.profile_picture_url}
               alt=""
-              className="h-7 w-7 rounded-full object-cover"
+              className="h-8 w-8 shrink-0 rounded-full object-cover ring-2 ring-slate-100"
             />
-            <div className="flex-1">
-              <span className="font-semibold">{c.author.username}</span>{" "}
-              <span>{c.body}</span>
+            <div className="flex-1 rounded-2xl rounded-tl-md bg-slate-50 px-3 py-2">
+              <span className="font-semibold text-slate-900">{c.author.username}</span>{" "}
+              <span className="text-slate-700">{c.body}</span>
             </div>
             {user && (user.id === c.author.id || user.id === memeAuthorId) && (
               <button
                 onClick={() => remove.mutate(c.id)}
-                className="text-xs text-gray-400 hover:text-rose-600"
+                className="mt-1.5 text-xs text-slate-400 hover:text-rose-600"
               >
                 delete
               </button>

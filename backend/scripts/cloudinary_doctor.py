@@ -54,6 +54,8 @@ def main() -> int:
     try:
         storage.check()
         print("ping OK (credentials + cloud_name are valid)")
+        print("  NOTE: ping is a *read* action — a permission-restricted key can")
+        print("  pass this and still fail the upload check below.")
     except Exception as exc:  # noqa: BLE001
         print(f"ping FAILED: {type(exc).__name__}: {exc}")
         print("  -> wrong api_key/api_secret/cloud_name, or the account is disabled.")
@@ -66,6 +68,10 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"upload FAILED: {type(exc).__name__}: {exc}")
         print(
+            "  -> 'missing permissions (actions=[\"create\"])': the API key is "
+            "permission-restricted and cannot upload. In the Cloudinary console\n"
+            "     (Settings -> API Keys) use the primary key, or grant this key the "
+            "asset 'create' permission / an Admin role.\n"
             "  -> 'Customer is marked as untrusted': verify your Cloudinary email / "
             "wait for account review, or contact Cloudinary support.\n"
             "  -> other messages usually mean an account media-type or upload-preset "

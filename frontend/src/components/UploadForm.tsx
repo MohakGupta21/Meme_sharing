@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { uploadMeme } from "../api/memes";
 import { apiErrorMessage } from "../api/axiosClient";
 import { useObjectUrl } from "../hooks/useObjectUrl";
+import { PlusIcon, SparkleIcon } from "./icons";
 
 export function UploadForm({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
@@ -14,6 +15,12 @@ export function UploadForm({ onDone }: { onDone: () => void }) {
 
   const preview = useObjectUrl(file);
   const isVideo = file?.type.startsWith("video/");
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onDone();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onDone]);
 
   const upload = useMutation({
     mutationFn: () => {
@@ -28,59 +35,98 @@ export function UploadForm({ onDone }: { onDone: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
-        <h2 className="mb-3 text-lg font-semibold">New meme</h2>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onDone}
+    >
+      <div
+        className="w-full max-w-lg animate-fade-in rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+            <SparkleIcon className="text-gradient text-xl" />
+            New meme
+          </h2>
+          <button
+            onClick={onDone}
+            className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          >
+            ✕
+          </button>
+        </div>
 
-        <input
-          type="file"
-          accept="image/*,video/*"
-          onChange={(e) => {
-            setError(null);
-            setFile(e.target.files?.[0] ?? null);
-          }}
-          className="mb-3 block w-full text-sm"
-        />
-
-        {preview &&
-          (isVideo ? (
-            <video src={preview} controls className="mb-3 max-h-60 w-full rounded" />
-          ) : (
-            <img src={preview} alt="preview" className="mb-3 max-h-60 w-full rounded object-contain" />
-          ))}
+        {preview ? (
+          <div className="relative mb-3 overflow-hidden rounded-2xl bg-slate-950">
+            {isVideo ? (
+              <video src={preview} controls className="max-h-72 w-full" />
+            ) : (
+              <img src={preview} alt="preview" className="max-h-72 w-full object-contain" />
+            )}
+            <button
+              onClick={() => setFile(null)}
+              className="absolute right-2 top-2 rounded-lg bg-slate-900/70 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-900"
+            >
+              Replace
+            </button>
+          </div>
+        ) : (
+          <label className="mb-3 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center transition hover:border-brand-300 hover:bg-brand-50/40">
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-white text-brand-500 shadow-sm">
+              <PlusIcon className="text-xl" />
+            </span>
+            <span className="text-sm font-semibold text-slate-700">Choose an image or video</span>
+            <span className="text-xs text-slate-400">JPG, PNG, GIF, WebP, MP4, WebM, MOV</span>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              onChange={(e) => {
+                setError(null);
+                setFile(e.target.files?.[0] ?? null);
+              }}
+              className="hidden"
+            />
+          </label>
+        )}
 
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title (optional)"
           maxLength={140}
-          className="mb-2 w-full rounded-md border px-3 py-2 text-sm"
+          className="input mb-2"
         />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
           maxLength={1000}
-          className="mb-3 w-full rounded-md border px-3 py-2 text-sm"
+          rows={3}
+          className="input mb-3 resize-none"
         />
 
         {upload.isPending && (
-          <div className="mb-3 h-2 w-full overflow-hidden rounded bg-gray-200">
-            <div className="h-full bg-indigo-600" style={{ width: `${progress}%` }} />
+          <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-brand-500 to-fuchsia-500 transition-all"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         )}
-        {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
+        {error && (
+          <p className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        )}
 
         <div className="flex justify-end gap-2">
-          <button onClick={onDone} className="rounded-md px-4 py-2 text-sm text-gray-600">
+          <button onClick={onDone} className="btn btn-ghost">
             Cancel
           </button>
           <button
             onClick={() => upload.mutate()}
             disabled={!file || upload.isPending}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn btn-primary"
           >
-            {upload.isPending ? "Uploading…" : "Post"}
+            {upload.isPending ? "Posting…" : "Post meme"}
           </button>
         </div>
       </div>

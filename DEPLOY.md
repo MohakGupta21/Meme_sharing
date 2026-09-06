@@ -104,10 +104,15 @@ Memes and avatars can be stored in a Cloudinary account so they survive redeploy
 
 1. Create a free Cloudinary account. On the dashboard, copy the **API environment
    variable** — it looks like `cloudinary://<api_key>:<api_secret>@<cloud_name>`.
+   Use the **primary API key** (Settings → API Keys). A permission-scoped key that
+   lacks asset **create** rights fails uploads with
+   `Request forbidden due to missing permissions (actions=["create"])` even though
+   `/health/storage` (a read-only ping) still reports ok.
 2. **Render → memeshare-api → Environment**: set `CLOUDINARY_URL` to that string and
    `STORAGE_BACKEND=cloudinary`. Save (Render redeploys).
 3. Check `https://memeshare-api.onrender.com/health/storage` →
-   `{"status":"ok","backend":"cloudinary"}`.
+   `{"status":"ok","backend":"cloudinary"}`, then confirm with a real upload (post a
+   meme) — or run `python scripts/cloudinary_doctor.py`, which also tests upload.
 
 URLs are rebuilt from config at response time, so no data migration is needed —
 but files uploaded while on `local` are already gone and need re-uploading.

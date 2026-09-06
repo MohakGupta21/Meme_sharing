@@ -1,18 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { listConversations, listMessages, markRead } from "../api/chat";
 import { useChatSocket } from "../hooks/useChatSocket";
 import { useAuth } from "../auth/useAuth";
+import { parseUtc } from "../lib/format";
+import { ChatIcon } from "../components/icons";
 import type { Message } from "../types";
 
-/** Backend stores naive UTC ("2026-09-02 18:05:19"); render it as a local HH:MM. */
 function formatTime(ts: string): string {
-  const iso = ts.includes("T") ? ts : ts.replace(" ", "T");
-  const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(iso);
-  return new Date(hasTz ? iso : `${iso}Z`).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return parseUtc(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 export function Chat() {
@@ -53,7 +50,6 @@ export function Chat() {
     },
   });
 
-  // load history when switching conversation
   useEffect(() => {
     if (activeId == null) return;
     let cancelled = false;
@@ -103,105 +99,160 @@ export function Chat() {
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-52px)] max-w-4xl">
-      <aside className="w-64 shrink-0 overflow-y-auto border-r bg-white">
-        <div className="flex items-center justify-between p-3">
-          <h2 className="font-semibold">Chats</h2>
-          <span className={`text-xs ${connected ? "text-green-600" : "text-gray-400"}`}>
-            {connected ? "online" : "offline"}
+    <div className="-mb-24 flex h-[calc(100dvh-3.25rem)] gap-0 lg:-mb-10 lg:h-screen lg:gap-4 lg:py-4">
+      <aside className="flex w-[86px] shrink-0 flex-col border-r border-slate-200/70 bg-white sm:w-72 lg:rounded-2xl lg:border">
+        <div className="flex items-center justify-between px-3 py-3.5 sm:px-4">
+          <h2 className="hidden font-extrabold text-slate-900 sm:block">Messages</h2>
+          <span
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+              connected ? "text-emerald-600" : "text-slate-400"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-slate-300"}`}
+            />
+            <span className="hidden sm:inline">{connected ? "online" : "offline"}</span>
           </span>
         </div>
-        <ul>
+        <ul className="flex-1 overflow-y-auto px-1.5 pb-2">
           {convsQ.data?.map((c) => (
             <li key={c.id}>
               <button
                 onClick={() => setActiveId(c.id)}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-left ${
-                  c.id === activeId ? "bg-indigo-50" : "hover:bg-gray-50"
+                className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition ${
+                  c.id === activeId ? "bg-brand-50" : "hover:bg-slate-100"
                 }`}
               >
-                <img
-                  src={c.other_user.profile_picture_url}
-                  alt=""
-                  className="h-9 w-9 rounded-full object-cover"
-                />
-                <span className="flex-1 truncate text-sm font-medium">
-                  {c.other_user.display_name || c.other_user.username}
-                </span>
-                {c.unread_count > 0 && (
-                  <span className="rounded-full bg-indigo-600 px-1.5 text-xs text-white">
-                    {c.unread_count}
+                <div className="relative shrink-0">
+                  <img
+                    src={c.other_user.profile_picture_url}
+                    alt=""
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  {c.unread_count > 0 && (
+                    <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                      {c.unread_count}
+                    </span>
+                  )}
+                </div>
+                <span className="hidden min-w-0 flex-1 sm:block">
+                  <span className="block truncate text-sm font-semibold text-slate-900">
+                    {c.other_user.display_name || c.other_user.username}
                   </span>
-                )}
+                  {c.last_message && (
+                    <span className="block truncate text-xs text-slate-400">
+                      {c.last_message.body}
+                    </span>
+                  )}
+                </span>
               </button>
             </li>
           ))}
           {convsQ.data?.length === 0 && (
-            <p className="p-3 text-sm text-gray-500">Add a friend to start chatting.</p>
+            <p className="p-3 text-xs text-slate-400 sm:text-sm">
+              Add a friend to start chatting.
+            </p>
           )}
         </ul>
       </aside>
 
-      <section className="flex flex-1 flex-col">
+      <section className="flex flex-1 flex-col bg-white lg:rounded-2xl lg:border lg:border-slate-200/70">
         {active ? (
           <>
-            <header className="border-b bg-white p-3 text-sm font-semibold">
-              {active.other_user.display_name || active.other_user.username}
+            <header className="flex items-center gap-3 border-b border-slate-200/70 px-4 py-3 lg:rounded-t-2xl">
+              <img
+                src={active.other_user.profile_picture_url}
+                alt=""
+                className="h-9 w-9 rounded-full object-cover"
+              />
+              <Link
+                to={`/users/${active.other_user.id}`}
+                className="text-sm font-bold text-slate-900 hover:underline"
+              >
+                {active.other_user.display_name || active.other_user.username}
+              </Link>
             </header>
-            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+
+            <div className="flex-1 space-y-1.5 overflow-y-auto bg-slate-50/60 p-4">
               {olderCursor && (
                 <button
                   onClick={loadOlder}
-                  className="mx-auto block rounded-md border px-3 py-1 text-xs text-gray-500"
+                  className="mx-auto mb-2 block rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 hover:bg-slate-50"
                 >
                   Load earlier messages
                 </button>
               )}
-              {messages.map((m) => {
+              {messages.map((m, i) => {
                 const mine = m.sender_id === user?.id;
+                const prev = messages[i - 1];
+                const grouped = prev && prev.sender_id === m.sender_id;
                 return (
                   <div
                     key={m.id}
-                    className={`w-fit max-w-[70%] break-words rounded-lg px-3 py-2 text-sm ${
-                      mine ? "ml-auto bg-indigo-600 text-white" : "bg-white"
+                    className={`flex ${mine ? "justify-end" : "justify-start"} ${
+                      grouped ? "mt-0.5" : "mt-2.5"
                     }`}
                   >
-                    <span>{m.body}</span>
-                    <span
-                      className={`mt-1 block text-right text-[10px] ${
-                        mine ? "text-white/70" : "text-gray-400"
+                    <div
+                      className={`max-w-[78%] break-words rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
+                        mine
+                          ? "rounded-br-md bg-gradient-to-br from-brand-600 to-brand-600 text-white"
+                          : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
                       }`}
                     >
-                      {formatTime(m.created_at)}
-                      {mine && m.read_at && " · read"}
-                    </span>
+                      <span>{m.body}</span>
+                      <span
+                        className={`mt-1 block text-right text-[10px] ${
+                          mine ? "text-white/70" : "text-slate-400"
+                        }`}
+                      >
+                        {formatTime(m.created_at)}
+                        {mine && m.read_at && " · read"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
-              {peerTyping && <p className="text-xs italic text-gray-400">typing…</p>}
+              {peerTyping && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3 py-2.5">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.2s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.1s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+                  </div>
+                </div>
+              )}
               <div ref={bottomRef} />
             </div>
-            <div className="flex gap-2 border-t bg-white p-3">
+
+            <div className="flex gap-2 border-t border-slate-200/70 bg-white p-3 lg:rounded-b-2xl">
               <input
                 value={draft}
                 onChange={(e) => onDraftChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSend()}
                 placeholder="Type a message…"
-                className="flex-1 rounded-md border px-3 py-2 text-sm"
+                className="input flex-1"
                 maxLength={4000}
               />
               <button
                 onClick={onSend}
                 disabled={!draft.trim()}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn btn-primary px-5"
               >
                 Send
               </button>
             </div>
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-gray-500">
-            Select a conversation
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-500">
+              <ChatIcon className="text-2xl" />
+            </span>
+            <p className="text-sm font-semibold text-slate-700">Your messages</p>
+            <p className="max-w-xs text-sm text-slate-400">
+              Pick a conversation to start chatting — messages, typing and read receipts update
+              live.
+            </p>
           </div>
         )}
       </section>

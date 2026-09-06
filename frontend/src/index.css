@@ -6,6 +6,78 @@
   color-scheme: light;
 }
 
-body {
-  @apply bg-gray-50 text-gray-900;
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    font-feature-settings: "cv11", "ss01";
+    background-image:
+      radial-gradient(48rem 48rem at 108% -8%, rgba(99, 102, 241, 0.12), transparent 60%),
+      radial-gradient(42rem 42rem at -12% 6%, rgba(217, 70, 239, 0.09), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background: rgb(203 213 225 / 0.75);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184 / 0.85);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-slate-200/70 bg-white shadow-card;
+  }
+  .card-interactive {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-lift;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800
+      outline-none transition placeholder:text-slate-400
+      focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
+  }
+
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl px-4 py-2.5
+      text-sm font-semibold transition active:scale-[0.98]
+      disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-brand-600 to-fuchsia-600 text-white shadow-sm
+      shadow-brand-600/25 hover:from-brand-500 hover:to-fuchsia-500;
+  }
+  .btn-soft {
+    @apply bg-slate-100 text-slate-700 hover:bg-slate-200;
+  }
+  .btn-ghost {
+    @apply text-slate-600 hover:bg-slate-100;
+  }
+  .btn-outline {
+    @apply border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1
+      text-xs font-medium text-slate-600;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-slate-200/70;
+  }
+
+  /* gradient text for headings / brand marks */
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-600 to-fuchsia-600 bg-clip-text text-transparent;
+  }
 }

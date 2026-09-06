@@ -2,7 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
-import { Navbar } from "./components/Navbar";
+import { ComposeProvider } from "./lib/compose";
+import { AppLayout } from "./components/layout/AppLayout";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Feed } from "./pages/Feed";
@@ -19,9 +20,8 @@ const queryClient = new QueryClient({
 
 function Shell() {
   return (
-    <>
-      <Navbar />
-      <main>
+    <ComposeProvider>
+      <AppLayout>
         <Routes>
           <Route path="/feed" element={<Feed />} />
           <Route path="/memes/:id" element={<MemeDetail />} />
@@ -32,8 +32,8 @@ function Shell() {
           <Route path="/chat" element={<Chat />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Routes>
-      </main>
-    </>
+      </AppLayout>
+    </ComposeProvider>
   );
 }
 

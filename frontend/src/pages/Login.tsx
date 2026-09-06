@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { apiErrorMessage } from "../api/axiosClient";
+import { AuthLayout } from "../components/AuthLayout";
 
 const schema = z.object({
   email_or_username: z.string().min(1, "Required"),
@@ -34,17 +35,27 @@ export function Login() {
   };
 
   return (
-    <div className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="mb-6 text-2xl font-bold text-indigo-600">MemeShare</h1>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Log in to see what your friends have been posting."
+      footer={
+        <>
+          No account?{" "}
+          <Link to="/signup" className="font-semibold text-brand-600 hover:underline">
+            Sign up
+          </Link>
+        </>
+      }
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div>
           <input
             {...register("email_or_username")}
             placeholder="Email or username"
-            className="w-full rounded-md border px-3 py-2"
+            className="input"
           />
           {errors.email_or_username && (
-            <p className="text-xs text-rose-600">{errors.email_or_username.message}</p>
+            <p className="mt-1 text-xs text-rose-600">{errors.email_or_username.message}</p>
           )}
         </div>
         <div>
@@ -52,25 +63,19 @@ export function Login() {
             {...register("password")}
             type="password"
             placeholder="Password"
-            className="w-full rounded-md border px-3 py-2"
+            className="input"
           />
-          {errors.password && <p className="text-xs text-rose-600">{errors.password.message}</p>}
+          {errors.password && (
+            <p className="mt-1 text-xs text-rose-600">{errors.password.message}</p>
+          )}
         </div>
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded-md bg-indigo-600 py-2 font-medium text-white disabled:opacity-50"
-        >
-          Log in
+        {error && (
+          <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        )}
+        <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
+          {isSubmitting ? "Logging in…" : "Log in"}
         </button>
       </form>
-      <p className="mt-4 text-sm text-gray-600">
-        No account?{" "}
-        <Link to="/signup" className="text-indigo-600">
-          Sign up
-        </Link>
-      </p>
-    </div>
+    </AuthLayout>
   );
 }
