@@ -1,6 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  // Touch screens keep :hover after a tap; only apply hover styles where a pointer hovers.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       fontFamily: {
@@ -31,10 +33,29 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-6px)" },
         },
+        pop: {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.35)" },
+          "100%": { transform: "scale(1)" },
+        },
+        "heart-burst": {
+          "0%": { opacity: "0", transform: "scale(0.3)" },
+          "15%": { opacity: "1", transform: "scale(1.15)" },
+          "30%": { transform: "scale(0.95)" },
+          "45%, 70%": { opacity: "1", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(1.1) translateY(-12px)" },
+        },
+        "sheet-up": {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "none" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.35s ease both",
         float: "float 6s ease-in-out infinite",
+        pop: "pop 0.35s ease-out",
+        "heart-burst": "heart-burst 0.9s ease-out both",
+        "sheet-up": "sheet-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
       },
     },
   },

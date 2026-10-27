@@ -13,26 +13,26 @@ export function MemeDetail() {
   });
 
   return (
-    <div className="mx-auto max-w-[600px] px-3 py-5 sm:px-5">
+    <div className="mx-auto max-w-[600px] py-3 sm:px-5 sm:py-5">
       <Link
         to="/feed"
-        className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800"
+        className="mb-3 ml-3 inline-flex min-h-10 sm:ml-0 items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800"
       >
         ← Back to feed
       </Link>
 
-      {isLoading && <div className="card h-96 animate-pulse" />}
+      {isLoading && <div className="card card-flush h-96 animate-pulse" />}
       {(isError || (!isLoading && !meme)) && (
-        <p className="card p-8 text-center text-sm text-slate-400">Meme not found.</p>
+        <p className="card card-flush p-8 text-center text-sm text-slate-400">Meme not found.</p>
       )}
 
       {meme && (
-        <div className="space-y-4">
+        <div className="space-y-2.5 sm:space-y-4">
           <MemeCard meme={meme} />
           {meme.description && (
-            <p className="card p-4 text-sm leading-relaxed text-slate-700">{meme.description}</p>
+            <p className="card card-flush whitespace-pre-wrap break-words p-4 text-sm leading-relaxed text-slate-700">{meme.description}</p>
           )}
-          <div className="card p-4">
+          <div className="card card-flush p-4">
             <h2 className="mb-3 text-sm font-bold text-slate-900">Comments</h2>
             <CommentList memeId={meme.id} memeAuthorId={meme.author.id} />
           </div>

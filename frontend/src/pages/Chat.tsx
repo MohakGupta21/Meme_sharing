@@ -267,7 +267,7 @@ export function Chat() {
                 onKeyDown={(e) => e.key === "Enter" && onSend()}
                 placeholder="Type a message…"
                 enterKeyHint="send"
-                className="input min-w-0 flex-1 text-base sm:text-sm"
+                className="input min-w-0 flex-1"
                 maxLength={4000}
               />
               <button

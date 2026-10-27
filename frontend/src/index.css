@@ -9,6 +9,7 @@
 @layer base {
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
+    -webkit-tap-highlight-color: transparent;
     font-feature-settings: "cv11", "ss01";
     background-image:
       radial-gradient(48rem 48rem at 108% -8%, rgba(99, 102, 241, 0.12), transparent 60%),
@@ -38,13 +39,17 @@
   .card {
     @apply rounded-2xl border border-slate-200/70 bg-white shadow-card;
   }
+  /* Edge-to-edge on phones (feed-style), rounded card from sm up. */
+  .card-flush {
+    @apply rounded-none border-x-0 shadow-none sm:rounded-2xl sm:border-x sm:shadow-card;
+  }
   .card-interactive {
     @apply transition duration-200 hover:-translate-y-0.5 hover:shadow-lift;
   }
 
   .input {
     @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800
-      outline-none transition placeholder:text-slate-400
+      outline-none transition placeholder:text-slate-400 max-sm:text-base
       focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
   }
 

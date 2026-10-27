@@ -6,7 +6,7 @@ import { PlusIcon, SparkleIcon } from "../components/icons";
 
 function CardSkeleton() {
   return (
-    <div className="card overflow-hidden">
+    <div className="card card-flush overflow-hidden">
       <div className="flex items-center gap-3 p-3.5">
         <div className="skeleton h-10 w-10 rounded-full" />
         <div className="flex-1 space-y-2">
@@ -31,10 +31,11 @@ export function Feed() {
   const memes = data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <div className="mx-auto max-w-[600px] px-3 py-5 sm:px-5">
-      <div className="z-20 -mx-3 mb-4 flex items-center justify-between border-b border-slate-200/60 bg-slate-50/80 px-3 py-2.5 backdrop-blur-md sm:-mx-5 sm:px-5 lg:sticky lg:top-0">
+    <div className="mx-auto max-w-[600px] py-3 sm:px-5 sm:py-5">
+      <div className="z-20 mb-3 hidden items-center justify-between border-b border-slate-200/60 bg-slate-50/80 py-2.5 backdrop-blur-md sm:-mx-5 sm:mb-4 sm:flex sm:px-5 lg:sticky lg:top-0">
         <h1 className="text-xl font-extrabold tracking-tight text-slate-900">Your feed</h1>
-        <button onClick={compose.open} className="btn btn-primary px-3.5 py-2">
+        {/* Below lg the bottom bar's compose button covers this. */}
+        <button onClick={compose.open} className="btn btn-primary px-3.5 py-2 max-lg:hidden">
           <PlusIcon className="text-base" />
           Post
         </button>
@@ -43,7 +44,7 @@ export function Feed() {
       {/* composer prompt */}
       <button
         onClick={compose.open}
-        className="card mb-4 flex w-full items-center gap-3 p-3.5 text-left transition hover:border-brand-200 hover:shadow-lift"
+        className="card card-flush mb-2.5 flex w-full items-center gap-3 p-3.5 text-left transition hover:border-brand-200 hover:shadow-lift active:bg-slate-50 sm:mb-4"
       >
         <img
           src={user?.profile_picture_url}
@@ -59,14 +60,14 @@ export function Feed() {
       </button>
 
       {isLoading && (
-        <div className="space-y-4">
+        <div className="space-y-2.5 sm:space-y-4">
           <CardSkeleton />
           <CardSkeleton />
         </div>
       )}
 
       {!isLoading && memes.length === 0 && (
-        <div className="card animate-fade-in flex flex-col items-center gap-3 p-10 text-center">
+        <div className="card card-flush animate-fade-in flex flex-col items-center gap-3 p-10 text-center">
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-500">
             <SparkleIcon className="text-2xl" />
           </span>
@@ -82,7 +83,7 @@ export function Feed() {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-2.5 sm:space-y-4">
         {memes.map((m) => (
           <MemeCard key={m.id} meme={m} />
         ))}
@@ -92,7 +93,7 @@ export function Feed() {
         <button
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="btn btn-outline mt-4 w-full"
+          className="btn btn-outline mx-3 mt-4 w-[calc(100%-1.5rem)] sm:mx-0 sm:w-full"
         >
           {isFetchingNextPage ? "Loading…" : "Load more"}
         </button>

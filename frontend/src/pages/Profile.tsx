@@ -31,8 +31,8 @@ export function Profile() {
 
   if (isLoading || !user) {
     return (
-      <div className="mx-auto max-w-[600px] px-3 py-5 sm:px-5">
-        <div className="card h-52 animate-pulse" />
+      <div className="mx-auto max-w-[600px] sm:px-5 sm:py-5">
+        <div className="card card-flush h-52 animate-pulse" />
       </div>
     );
   }
@@ -42,15 +42,15 @@ export function Profile() {
   ).toLocaleDateString([], { month: "short", year: "numeric" });
 
   return (
-    <div className="mx-auto max-w-[600px] px-3 py-5 sm:px-5">
-      <div className="card animate-fade-in overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-brand-500 via-brand-600 to-fuchsia-600" />
-        <div className="px-5 pb-5">
-          <div className="-mt-12 flex items-end justify-between">
+    <div className="mx-auto max-w-[600px] pb-3 sm:px-5 sm:py-5">
+      <div className="card card-flush animate-fade-in overflow-hidden">
+        <div className="h-24 bg-gradient-to-r from-brand-500 via-brand-600 to-fuchsia-600" />
+        <div className="px-4 pb-5 sm:px-5">
+          <div className="-mt-10 flex items-end justify-between gap-3 sm:-mt-12">
             <img
               src={user.profile_picture_url}
               alt=""
-              className="h-24 w-24 rounded-2xl object-cover ring-4 ring-white"
+              className="h-20 w-20 shrink-0 rounded-2xl object-cover ring-4 ring-white sm:h-24 sm:w-24"
             />
             <div className="mb-1">
               {isMe ? (
@@ -64,7 +64,7 @@ export function Profile() {
             </div>
           </div>
 
-          <h1 className="mt-3 text-xl font-extrabold text-slate-900">
+          <h1 className="mt-3 break-words text-xl font-extrabold text-slate-900">
             {user.display_name || user.username}
           </h1>
           <p className="text-sm text-slate-400">@{user.username}</p>
@@ -85,24 +85,24 @@ export function Profile() {
         </div>
       </div>
 
-      <h2 className="mb-3 mt-6 px-1 text-sm font-bold text-slate-500">
+      <h2 className="mb-2.5 mt-5 px-4 text-sm font-bold text-slate-500 sm:mb-3 sm:mt-6 sm:px-1">
         {isMe ? "Your memes" : "Memes"}
       </h2>
 
-      <div className="space-y-4">
+      <div className="space-y-2.5 sm:space-y-4">
         {memes.map((m) => (
           <MemeCard key={m.id} meme={m} />
         ))}
       </div>
 
       {!memesQ.isLoading && memes.length === 0 && (
-        <p className="card p-8 text-center text-sm text-slate-400">No memes yet.</p>
+        <p className="card card-flush p-8 text-center text-sm text-slate-400">No memes yet.</p>
       )}
 
       {memesQ.hasNextPage && (
         <button
           onClick={() => memesQ.fetchNextPage()}
-          className="btn btn-outline mt-4 w-full"
+          className="btn btn-outline mx-3 mt-4 w-[calc(100%-1.5rem)] sm:mx-0 sm:w-full"
         >
           Load more
         </button>

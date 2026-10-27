@@ -57,13 +57,14 @@ export function CommentList({ memeId, memeAuthorId }: { memeId: number; memeAuth
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Add a comment…"
-          className="input flex-1"
+          className="input min-w-0 flex-1"
+          enterKeyHint="send"
           maxLength={1000}
         />
         <button
           type="submit"
           disabled={add.isPending || !draft.trim()}
-          className="btn btn-primary"
+          className="btn btn-primary shrink-0"
         >
           Post
         </button>
@@ -83,14 +84,14 @@ export function CommentList({ memeId, memeAuthorId }: { memeId: number; memeAuth
               alt=""
               className="h-8 w-8 shrink-0 rounded-full object-cover ring-2 ring-slate-100"
             />
-            <div className="flex-1 rounded-2xl rounded-tl-md bg-slate-50 px-3 py-2">
+            <div className="min-w-0 flex-1 break-words rounded-2xl rounded-tl-md bg-slate-50 px-3 py-2">
               <span className="font-semibold text-slate-900">{c.author.username}</span>{" "}
               <span className="text-slate-700">{c.body}</span>
             </div>
             {user && (user.id === c.author.id || user.id === memeAuthorId) && (
               <button
                 onClick={() => remove.mutate(c.id)}
-                className="mt-1.5 text-xs text-slate-400 hover:text-rose-600"
+                className="-mr-1 shrink-0 rounded-lg px-2 py-1.5 text-xs text-slate-400 hover:text-rose-600"
               >
                 delete
               </button>
