@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { listConversations, listMessages, markRead } from "../api/chat";
 import { useChatSocket } from "../hooks/useChatSocket";
 import { useAuth } from "../auth/useAuth";
 import { parseUtc } from "../lib/format";
-import { ChatIcon } from "../components/icons";
+import { ArrowLeftIcon, ChatIcon } from "../components/icons";
 import type { Message } from "../types";
 
 function formatTime(ts: string): string {
@@ -15,7 +15,15 @@ function formatTime(ts: string): string {
 export function Chat() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [activeId, setActiveId] = useState<number | null>(null);
+  // Active conversation lives in the URL (?c=<id>) so the phone's back gesture
+  // closes the full-screen thread instead of leaving the chat page.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeParam = Number(searchParams.get("c"));
+  const activeId = Number.isInteger(activeParam) && activeParam > 0 ? activeParam : null;
+  const openConversation = (id: number) => {
+    if (id !== activeId) setSearchParams({ c: String(id) }, { replace: activeId != null });
+  };
+  const closeConversation = () => setSearchParams({}, { replace: true });
   const [messages, setMessages] = useState<Message[]>([]);
   const [olderCursor, setOlderCursor] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -68,8 +76,18 @@ export function Chat() {
   }, [activeId, qc, sendRead]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, peerTyping]);
+
+  // Below lg the open thread is a fixed full-screen layer; stop the page behind it scrolling.
+  useEffect(() => {
+    if (activeId == null || !window.matchMedia("(max-width: 1023px)").matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [activeId]);
 
   const active = useMemo(
     () => convsQ.data?.find((c) => c.id === activeId) ?? null,
@@ -99,10 +117,14 @@ export function Chat() {
   };
 
   return (
-    <div className="-mb-24 flex h-[calc(100dvh-3.25rem)] gap-0 lg:-mb-10 lg:h-screen lg:gap-4 lg:py-4">
-      <aside className="flex w-[86px] shrink-0 flex-col border-r border-slate-200/70 bg-white sm:w-72 lg:rounded-2xl lg:border">
-        <div className="flex items-center justify-between px-3 py-3.5 sm:px-4">
-          <h2 className="hidden font-extrabold text-slate-900 sm:block">Messages</h2>
+    <div className="lg:-mb-10 lg:flex lg:h-screen lg:gap-4 lg:py-4">
+      <aside
+        className={`${
+          active ? "hidden lg:flex" : "flex"
+        } min-h-[calc(100dvh-9.5rem)] w-full shrink-0 flex-col bg-white lg:min-h-0 lg:w-72 lg:rounded-2xl lg:border lg:border-slate-200/70`}
+      >
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <h2 className="font-extrabold text-slate-900">Messages</h2>
           <span
             className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
               connected ? "text-emerald-600" : "text-slate-400"
@@ -111,15 +133,15 @@ export function Chat() {
             <span
               className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-slate-300"}`}
             />
-            <span className="hidden sm:inline">{connected ? "online" : "offline"}</span>
+            <span>{connected ? "online" : "offline"}</span>
           </span>
         </div>
-        <ul className="flex-1 overflow-y-auto px-1.5 pb-2">
+        <ul className="flex-1 px-1.5 pb-2 lg:overflow-y-auto">
           {convsQ.data?.map((c) => (
             <li key={c.id}>
               <button
-                onClick={() => setActiveId(c.id)}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition ${
+                onClick={() => openConversation(c.id)}
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${
                   c.id === activeId ? "bg-brand-50" : "hover:bg-slate-100"
                 }`}
               >
@@ -127,7 +149,7 @@ export function Chat() {
                   <img
                     src={c.other_user.profile_picture_url}
                     alt=""
-                    className="h-10 w-10 rounded-full object-cover"
+                    className="h-12 w-12 rounded-full object-cover lg:h-10 lg:w-10"
                   />
                   {c.unread_count > 0 && (
                     <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
@@ -135,7 +157,7 @@ export function Chat() {
                     </span>
                   )}
                 </div>
-                <span className="hidden min-w-0 flex-1 sm:block">
+                <span className="block min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-slate-900">
                     {c.other_user.display_name || c.other_user.username}
                   </span>
@@ -149,17 +171,30 @@ export function Chat() {
             </li>
           ))}
           {convsQ.data?.length === 0 && (
-            <p className="p-3 text-xs text-slate-400 sm:text-sm">
+            <p className="p-3 text-sm text-slate-400">
               Add a friend to start chatting.
             </p>
           )}
         </ul>
       </aside>
 
-      <section className="flex flex-1 flex-col bg-white lg:rounded-2xl lg:border lg:border-slate-200/70">
+      <section
+        className={`${
+          active
+            ? "fixed inset-x-0 top-0 z-40 flex h-[100dvh] lg:static lg:z-auto lg:h-auto"
+            : "hidden lg:flex"
+        } min-w-0 flex-1 flex-col bg-white lg:rounded-2xl lg:border lg:border-slate-200/70`}
+      >
         {active ? (
           <>
-            <header className="flex items-center gap-3 border-b border-slate-200/70 px-4 py-3 lg:rounded-t-2xl">
+            <header className="flex shrink-0 items-center gap-3 border-b border-slate-200/70 px-2 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] lg:rounded-t-2xl lg:px-4 lg:py-3">
+              <button
+                onClick={closeConversation}
+                aria-label="Back to conversations"
+                className="rounded-full p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+              >
+                <ArrowLeftIcon className="text-xl" />
+              </button>
               <img
                 src={active.other_user.profile_picture_url}
                 alt=""
@@ -167,13 +202,13 @@ export function Chat() {
               />
               <Link
                 to={`/users/${active.other_user.id}`}
-                className="text-sm font-bold text-slate-900 hover:underline"
+                className="min-w-0 truncate text-sm font-bold text-slate-900 hover:underline"
               >
                 {active.other_user.display_name || active.other_user.username}
               </Link>
             </header>
 
-            <div className="flex-1 space-y-1.5 overflow-y-auto bg-slate-50/60 p-4">
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain bg-slate-50/60 px-3 py-4 sm:px-4">
               {olderCursor && (
                 <button
                   onClick={loadOlder}
@@ -194,7 +229,7 @@ export function Chat() {
                     }`}
                   >
                     <div
-                      className={`max-w-[78%] break-words rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
+                      className={`max-w-[85%] whitespace-pre-wrap break-words sm:max-w-[78%] rounded-2xl px-3.5 py-2 text-sm shadow-sm ${
                         mine
                           ? "rounded-br-md bg-gradient-to-br from-brand-600 to-brand-600 text-white"
                           : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
@@ -225,19 +260,20 @@ export function Chat() {
               <div ref={bottomRef} />
             </div>
 
-            <div className="flex gap-2 border-t border-slate-200/70 bg-white p-3 lg:rounded-b-2xl">
+            <div className="flex shrink-0 gap-2 border-t border-slate-200/70 bg-white px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:rounded-b-2xl lg:pb-3">
               <input
                 value={draft}
                 onChange={(e) => onDraftChange(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && onSend()}
                 placeholder="Type a message…"
-                className="input flex-1"
+                enterKeyHint="send"
+                className="input min-w-0 flex-1 text-base sm:text-sm"
                 maxLength={4000}
               />
               <button
                 onClick={onSend}
                 disabled={!draft.trim()}
-                className="btn btn-primary px-5"
+                className="btn btn-primary shrink-0 px-4 sm:px-5"
               >
                 Send
               </button>
