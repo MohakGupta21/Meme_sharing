@@ -1,0 +1,16 @@
+
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.meme_sharing.twa",
+      "sha256_cert_fingerprints": [
+        "6B:9D:F7:73:6D:9F:34:7B:52:E7:75:10:66:82:9E:B2:D0:9B:38:DC:F0:12:D8:8C:7C:6E:EB:81:F4:D3:B9:5B"
+      ]
+    }
+  }
+]
+
